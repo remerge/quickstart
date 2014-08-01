@@ -16,14 +16,15 @@ partition() {
     debug partition "device is ${device}"
     local device_temp="partitions_${device}"
     local device="/dev/$(echo "${device}" | sed  -e 's:_:/:g')"
-    create_disklabel ${device} || die "could not create disklabel for device ${device}"
+    local gdisk_command=$(create_disklabel)
     for partition in $(eval echo \${${device_temp}}); do
       debug partition "partition is ${partition}"
       local minor=$(echo ${partition} | cut -d: -f1)
       local type=$(echo ${partition} | cut -d: -f2)
       local size=$(echo ${partition} | cut -d: -f3)
-      add_partition "${device}" "${minor}" "${type}" "${size}" || die "could not add partition ${minor} to device ${device}"
+      gdisk_command="${gdisk_command}$(add_partition "${minor}" "${type}" "${size}")"
     done
+    gdisk_command "${gdisk_command}"
     if [ "${need_mbr}" = "yes" ]; then
       notify "Converting to MBR"
       convert_to_mbr ${device}
