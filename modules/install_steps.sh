@@ -24,7 +24,7 @@ partition() {
       local size=$(echo ${partition} | cut -d: -f3)
       gdisk_command="${gdisk_command}$(add_partition "${minor}" "${type}" "${size}")"
     done
-    gdisk_command "${gdisk_command}"
+    gdisk_command ${device} "${gdisk_command}"
     if [ "${need_mbr}" = "yes" ]; then
       notify "Converting to MBR"
       convert_to_mbr ${device}
