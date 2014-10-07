@@ -6,8 +6,6 @@ kernel_image sys-kernel/zentoo-image
 rootpw tux
 timezone Europe/Berlin
 
-net eth0 current
-
 reboot
 
 set_clock() {
@@ -18,7 +16,11 @@ set_clock() {
 }
 
 install_dependencies() {
-	spawn "apt-get install -y gdisk" || :
+	if [[ -x /usr/bin/yum ]]; then
+		spawn "/usr/bin/yum -y install gdisk parted e2fsprogs xfsprogs"
+	elif [[ -x /usr/bin/apt-get ]]; then
+		spawn "/usr/bin/apt-get install -y gdisk parted e2fsprogs xfsprogs"
+	fi
 }
 
 pre_install() {

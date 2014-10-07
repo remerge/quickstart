@@ -16,19 +16,16 @@ partition() {
     debug partition "device is ${device}"
     local device_temp="partitions_${device}"
     local device="/dev/$(echo "${device}" | sed  -e 's:_:/:g')"
-    local gdisk_command=$(create_disklabel)
+    create_disklabel ${device} || die "could not create disklabel for device ${device}"
     for partition in $(eval echo \${${device_temp}}); do
       debug partition "partition is ${partition}"
       local minor=$(echo ${partition} | cut -d: -f1)
       local type=$(echo ${partition} | cut -d: -f2)
       local size=$(echo ${partition} | cut -d: -f3)
-      gdisk_command="${gdisk_command}$(add_partition "${minor}" "${type}" "${size}")"
+      add_partition "${device}" "${minor}" "${type}" "${size}" || die "could not add partition ${minor} to device ${device}"
     done
-    gdisk_command ${device} "${gdisk_command}"
-    if [ "${need_mbr}" = "yes" ]; then
-      notify "Converting to MBR"
-      convert_to_mbr ${device}
-    fi
+    partprobe
+    sleep 5
   done
 }
 
@@ -138,11 +135,6 @@ install_portage_tree() {
     spawn_chroot "emerge --sync" || die "could not sync portage tree"
   elif [ "${tree_type}" = "webrsync" ]; then
     spawn_chroot "emerge-webrsync" || die "could not emerge-webrsync"
-  elif [ "${tree_type}" = "git-snapshot" ]; then
-    fetch "${portage_snapshot_uri}" "${chroot_dir}/$(get_filename_from_uri ${portage_snapshot_uri})" || die "could not fetch portage snapshot"
-    unpack_tarball "${chroot_dir}/$(get_filename_from_uri ${portage_snapshot_uri})" "${chroot_dir}/usr" || die "could not unpack portage snapshot"
-    spawn_chroot "git --git-dir=/usr/portage/.git --work-tree=/usr/portage checkout ${portage_snapshot_branch}" || die "could not checkout portage branch"
-    spawn_chroot "emerge --sync" || die "could not sync portage tree"
   elif [ "${tree_type}" = "none" ]; then
     warn "'none' specified...skipping"
   else
@@ -207,7 +199,7 @@ setup_network_post() {
       case $mode in
       dhcp)
         spawn_chroot "systemctl enable dhcpcd.service" || die "failed to enable dhcpcd"
-      ;;
+        ;;
       current)
         local ipaddress=$(ip addr show dev ${device} | grep 'inet .*global' | awk '{ print $2 }' | awk -F/ '{ print $1 }')
         local gateway=$(ip route list | grep default.*${device} | awk '{ print $3 }')
@@ -222,8 +214,8 @@ Routes=('${gateway}')
 Gateway='${gateway}'
 DNS=('8.8.8.8' '8.8.4.4')
 EOF
-      spawn_chroot "netctl enable ${device}" || die "could not enable network interface"
-      ;;
+        spawn_chroot "netctl enable ${device}" || die "could not enable network interface"
+        ;;
       esac
 
     done
