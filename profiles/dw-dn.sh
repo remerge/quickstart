@@ -1,6 +1,6 @@
 . profiles/common/base.sh
 
-net eth0 current
+net eth0 dhcp
 
 part sdc 1 fd00 32G
 part sdc 2 a504
