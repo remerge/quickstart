@@ -200,6 +200,21 @@ setup_network_post() {
         spawn_chroot "systemctl enable dhcpcd.service" || die "failed to enable dhcpcd"
         ;;
       current)
+        local ipaddress=$(ip addr show dev ${device} | grep 'inet .*global' | awk '{ print $2 }')
+        local gateway=$(ip route list | grep default.*${device} | awk '{ print $3 }')
+        cat >> ${chroot_dir}/etc/netctl/${device} << EOF
+Description='${device}'
+Interface=${device}
+Connection=ethernet
+ForceConnect=yes
+IP=static
+Address=('${ipaddress}')
+Gateway='${gateway}'
+DNS=('8.8.8.8' '8.8.4.4')
+EOF
+        spawn_chroot "netctl enable ${device}" || die "could not enable network interface"
+        ;;
+      current-peer)
         local ipaddress=$(ip addr show dev ${device} | grep 'inet .*global' | awk '{ print $2 }' | awk -F/ '{ print $1 }')
         local gateway=$(ip route list | grep default.*${device} | awk '{ print $3 }')
         cat >> ${chroot_dir}/etc/netctl/${device} << EOF
