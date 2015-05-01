@@ -200,8 +200,9 @@ setup_network_post() {
         spawn_chroot "systemctl enable dhcpcd.service" || die "failed to enable dhcpcd"
         ;;
       current)
-        local ipaddress=$(ip addr show dev ${device} | grep 'inet .*global' | awk '{ print $2 }')
-        local gateway=$(ip route list | grep default.*${device} | awk '{ print $3 }')
+        local gateway=$(ip route list | grep default | awk '{ print $3 }')
+        local device_name=$(ip route list | grep default | awk '{ print $5 }')
+        local ipaddress=$(ip addr show dev ${device_name} | grep 'inet .*global' | awk '{ print $2 }')
         cat >> ${chroot_dir}/etc/netctl/${device} << EOF
 Description='${device}'
 Interface=${device}
@@ -215,8 +216,9 @@ EOF
         spawn_chroot "netctl enable ${device}" || die "could not enable network interface"
         ;;
       current-peer)
-        local ipaddress=$(ip addr show dev ${device} | grep 'inet .*global' | awk '{ print $2 }' | awk -F/ '{ print $1 }')
-        local gateway=$(ip route list | grep default.*${device} | awk '{ print $3 }')
+        local gateway=$(ip route list | grep default | awk '{ print $3 }')
+        local device_name=$(ip route list | grep default | awk '{ print $5 }')
+        local ipaddress=$(ip addr show dev ${device_name} | grep 'inet .*global' | awk '{ print $2 }' | awk -F/ '{ print $1 }')
         cat >> ${chroot_dir}/etc/netctl/${device} << EOF
 Description='${device}'
 Interface=${device}
@@ -231,8 +233,9 @@ EOF
         spawn_chroot "netctl enable ${device}" || die "could not enable network interface"
         ;;
       lxc)
-        local ipaddress=$(ip addr show dev ${device} | grep 'inet .*global' | awk '{ print $2 }')
-        local gateway=$(ip route list | grep default.*${device} | awk '{ print $3 }')
+        local gateway=$(ip route list | grep default | awk '{ print $3 }')
+        local device_name=$(ip route list | grep default | awk '{ print $5 }')
+        local ipaddress=$(ip addr show dev ${device_name} | grep 'inet .*global' | awk '{ print $2 }')
         cat >> ${chroot_dir}/etc/netctl/lxcbr0 << EOF
 Description='lxcbr0'
 Interface=lxcbr0
