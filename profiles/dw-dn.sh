@@ -2,13 +2,12 @@
 
 net eth0 dhcp
 
-part sdc 1 fd00 32G
-part sdc 2 a504
+part sda 1 fd00
+part sdb 1 fd00
+part sdc 1 fd00
+part sdd 1 fd00
 
-part sdd 1 fd00 32G
-part sdd 2 a504
-
-mdraid md1 --level=1 --raid-devices=2 /dev/sdc1 /dev/sdd1
+mdraid md1 --level=0 --raid-devices=4 /dev/sda1 /dev/sdb1 /dev/sdc1 /dev/sdd1
 
 format /dev/md1 ext4
 
