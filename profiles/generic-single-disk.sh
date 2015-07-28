@@ -1,6 +1,6 @@
 . profiles/common/base.sh
 
-net eth0 dhcp
+net eth0 current
 
 part sda 1 fd00
 
