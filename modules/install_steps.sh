@@ -197,45 +197,30 @@ setup_network_post() {
 
       case $mode in
       dhcp)
-        spawn_chroot "systemctl enable dhcpcd.service" || die "failed to enable dhcpcd"
+        cat >> ${chroot_dir}/etc/systemd/network/${device}.network << EOF
+[Match]
+Name=${device}
+
+[Network]
+DHCP=both
+EOF
         ;;
       current)
         local gateway=$(ip route list | grep default | awk '{ print $3 }')
-        local device_name=$(ip route list | grep default | awk '{ print $5 }')
-        local ipaddress=$(ip addr show dev ${device_name} | grep 'inet .*global' | awk '{ print $2 }')
-        cat >> ${chroot_dir}/etc/netctl/${device} << EOF
-Description='${device}'
-Interface=${device}
-Connection=ethernet
-ForceConnect=yes
-IP=static
-Address=('${ipaddress}')
-Gateway='${gateway}'
-DNS=('8.8.8.8' '8.8.4.4')
+        local ipaddress=$(ip addr show dev ${device} | grep 'inet .*global' | awk '{ print $2 }')
+        cat >> ${chroot_dir}/etc/systemd/network/${device}.network << EOF
+[Match]
+Name=${device}
+
+[Network]
+Address=${ipaddress}
+Gateway=${gateway}
 EOF
-        spawn_chroot "netctl enable ${device}" || die "could not enable network interface"
-        ;;
-      current-peer)
-        local gateway=$(ip route list | grep default | awk '{ print $3 }')
-        local device_name=$(ip route list | grep default | awk '{ print $5 }')
-        local ipaddress=$(ip addr show dev ${device_name} | grep 'inet .*global' | awk '{ print $2 }' | awk -F/ '{ print $1 }')
-        cat >> ${chroot_dir}/etc/netctl/${device} << EOF
-Description='${device}'
-Interface=${device}
-Connection=ethernet
-ForceConnect=yes
-IP=static
-Address=('${ipaddress}/32')
-Routes=('${gateway}')
-Gateway='${gateway}'
-DNS=('8.8.8.8' '8.8.4.4')
-EOF
-        spawn_chroot "netctl enable ${device}" || die "could not enable network interface"
         ;;
       lxc)
         local gateway=$(ip route list | grep default | awk '{ print $3 }')
-        local device_name=$(ip route list | grep default | awk '{ print $5 }')
-        local ipaddress=$(ip addr show dev ${device_name} | grep 'inet .*global' | awk '{ print $2 }')
+        local ipaddress=$(ip addr show dev ${device} | grep 'inet .*global' | awk '{ print $2 }')
+        spawn_chroot "emerge -n netctl" || die "could not emerge netctl"
         cat >> ${chroot_dir}/etc/netctl/lxcbr0 << EOF
 Description='lxcbr0'
 Interface=lxcbr0
@@ -252,7 +237,13 @@ EOF
 
     done
   fi
+
   spawn_chroot "touch /etc/udev/rules.d/80-net-name-slot.rules" || die "failed to touch udev rules"
+
+  spawn_chroot "systemctl disable systemd-networkd.service" || die "failed to disable networkd"
+  spawn_chroot "systemctl enable systemd-networkd.service" || die "failed to enable networkd"
+
+  spawn_chroot "systemctl disable sshd.service" || die "failed to disable sshd"
   spawn_chroot "systemctl enable sshd.service" || die "failed to enable sshd"
 }
 
